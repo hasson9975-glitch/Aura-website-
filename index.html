@@ -956,12 +956,20 @@
       var mm = v.match(/__AURA_IMG_(\d+)__/);
       if(mm && window.__auraParts[+mm[1]]){ el.setAttribute('src', dataUri(+mm[1])); }
     }
+    var st = el.getAttribute && el.getAttribute('style');
+    if(st && st.indexOf('__AURA_IMG_') !== -1){
+      var ns = st.replace(/__AURA_IMG_(\d+)__/g, function(m, n){
+        return window.__auraParts[+n] ? dataUri(+n) : m;
+      });
+      if(ns !== st) el.setAttribute('style', ns);
+    }
   }
   function walk(root){
-    var list = root.querySelectorAll ? root.querySelectorAll('img') : [];
+    var list = root.querySelectorAll ? root.querySelectorAll('img,[style*="__AURA_IMG_"]') : [];
     list.forEach(fixImg);
-    if(root.tagName === 'IMG') fixImg(root);
+    if(root.tagName === 'IMG' || (root.getAttribute && root.getAttribute('style') && root.getAttribute('style').indexOf('__AURA_IMG_') !== -1)) fixImg(root);
   }
+  window.__auraFixAll = function(){ walk(document); };
   function onAllLoaded(){
     walk(document);
     document.dispatchEvent(new Event('aura-images-ready'));
@@ -971,7 +979,7 @@
           mu.addedNodes.forEach(function(n){ if(n.nodeType===1) walk(n); });
         });
       });
-      obs.observe(document.documentElement, {childList:true, subtree:true});
+      obs.observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['src','style']});
     }
   }
   var done = 0, totalChunks = manifest.reduce(function(a,x){return a+x[1];},0);
